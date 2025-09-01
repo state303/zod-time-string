@@ -30,7 +30,8 @@
   ],
   "scripts": {
     "build": "tsup",
-    "test": "jest"
+    "test": "jest",
+    "prepare": "husky"
   },
   "peerDependencies": {
     "typescript": "^5",
