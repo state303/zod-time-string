@@ -5,36 +5,14 @@ export interface TimeStringErrorParams {
     message: string | ( ( invalid: string ) => string );
 }
 
-// Format validation error parameters
-export interface TimeStringFormatParams extends TimeStringErrorParams {
-}
-
-// Value validation error parameters
-export interface TimeStringValueParams extends TimeStringErrorParams {
-}
-
-// Unit validation error parameters
-export interface TimeStringUnitParams extends TimeStringErrorParams {
-}
-
-// Chainable validation method parameters
-export interface TimeStringPositiveParams extends TimeStringErrorParams {
-}
-
-export interface TimeStringNegativeParams extends TimeStringErrorParams {
-}
-
-export interface TimeStringMinParams extends TimeStringErrorParams {
-}
-
-export interface TimeStringMaxParams extends TimeStringErrorParams {
-}
+// Common type for error parameters
+export type ErrorParamType = string | TimeStringErrorParams | ( ( invalid: string ) => string ) | undefined;
 
 // Options for the time string schema
 export interface TimeStringOptions {
-    invalidFormatError?: string | TimeStringFormatParams | ( ( invalid: string ) => string );
-    invalidValueError?: string | TimeStringValueParams | ( ( invalid: string ) => string );
-    invalidUnitError?: string | TimeStringUnitParams | ( ( invalid: string ) => string );
+    invalidFormatError?: ErrorParamType;
+    invalidValueError?: ErrorParamType;
+    invalidUnitError?: ErrorParamType;
 }
 
 export const TimeUnit = {
@@ -69,19 +47,28 @@ const TIME_UNIT_PATTERNS = {
     [ TimeUnit.YEAR ]: 'years?|year?|yrs?|yr?|y',
 };
 
+// Pre-compile regex patterns for better performance
+const TIME_UNIT_REGEX_MAP: Record<TimeUnit, RegExp> = ( () => {
+    const map: Record<string, RegExp> = {};
+    const timeUnitKeys = Object.keys( TIME_UNIT_PATTERNS ) as TimeUnit[];
+    for ( const unit of timeUnitKeys ) {
+        map[ unit ] = new RegExp( `^(${TIME_UNIT_PATTERNS[unit]})$`, 'i' );
+    }
+    return map as Record<TimeUnit, RegExp>;
+} )();
+
 const VALUE_PATTERN = '(-?(?:\\d+)?\\.?\\d+)';
 // Use Object.keys instead of Object.values for ES2015 compatibility
 const UNITS_PATTERN = Object.keys( TIME_UNIT_PATTERNS ).map( key => TIME_UNIT_PATTERNS[ key as TimeUnit ] ).join( '|' );
 const FULL_PATTERN = new RegExp( `^\\s*${VALUE_PATTERN}\\s*(${UNITS_PATTERN})?\\s*$`, 'i' );
+const POSSIBLE_UNIT_PATTERN = new RegExp( `^(-?(?:\\d+)?\\.?\\d+)\\s*([a-zA-Z]+)$` );
 
 function getTimeUnit( unitStr: string ): TimeUnit | null {
     const lowerUnit = unitStr.toLowerCase();
-
-    // Use Object.keys instead of Object.entries for ES2015 compatibility
     const timeUnitKeys = Object.keys( TIME_UNIT_PATTERNS ) as TimeUnit[];
+
     for ( const unit of timeUnitKeys ) {
-        const pattern = TIME_UNIT_PATTERNS[ unit ];
-        if ( new RegExp( `^(${pattern})$`, 'i' ).test( lowerUnit ) ) {
+        if ( TIME_UNIT_REGEX_MAP[ unit ].test( lowerUnit ) ) {
             return unit;
         }
     }
@@ -91,13 +78,13 @@ function getTimeUnit( unitStr: string ): TimeUnit | null {
 
 // Improved type definition for TimeStringSchema with proper generics
 export interface TimeStringSchema extends z.ZodType<number> {
-    positive( params?: string | TimeStringPositiveParams | ( ( invalid: string ) => string ) ): TimeStringSchema;
+    positive( params?: string | TimeStringErrorParams | ( ( invalid: string ) => string ) ): TimeStringSchema;
 
-    negative( params?: string | TimeStringNegativeParams | ( ( invalid: string ) => string ) ): TimeStringSchema;
+    negative( params?: string | TimeStringErrorParams | ( ( invalid: string ) => string ) ): TimeStringSchema;
 
-    min( minValue: number, params?: string | TimeStringMinParams | ( ( invalid: string ) => string ) ): TimeStringSchema;
+    min( minValue: number, params?: string | TimeStringErrorParams | ( ( invalid: string ) => string ) ): TimeStringSchema;
 
-    max( maxValue: number, params?: string | TimeStringMaxParams | ( ( invalid: string ) => string ) ): TimeStringSchema;
+    max( maxValue: number, params?: string | TimeStringErrorParams | ( ( invalid: string ) => string ) ): TimeStringSchema;
 
     /**
      * Creates a new TimeStringSchema with custom error messages
@@ -112,21 +99,27 @@ export interface TimeStringSchema extends z.ZodType<number> {
  * Helper function to resolve error messages from various formats
  */
 function resolveErrorMessage(
-    errorOption: string | TimeStringErrorParams | ( ( invalid: string ) => string ) | undefined,
+    errorOption: ErrorParamType,
     defaultMessage: string,
     invalidValue: string
 ): string {
     if ( !errorOption ) return defaultMessage;
 
-    if ( typeof errorOption === 'string' ) {
-        return errorOption;
-    } else if ( typeof errorOption === 'function' ) {
-        return errorOption( invalidValue );
-    } else if ( typeof errorOption.message === 'function' ) {
-        return errorOption.message( invalidValue );
-    } else {
-        return errorOption.message;
-    }
+    if ( typeof errorOption === 'string' ) return errorOption;
+    if ( typeof errorOption === 'function' ) return errorOption( invalidValue );
+
+    const { message } = errorOption;
+    return typeof message === 'function' ? message( invalidValue ) : message;
+}
+
+// Helper function to create an issue in the validation context
+function createIssue( v: any, message: string, input: string ) {
+    v.issues.push( {
+        code: 'invalid_format',
+        format: 'regex',
+        message,
+        input,
+    } );
 }
 
 function createBaseTimeStringSchema( options?: TimeStringOptions ) {
@@ -139,7 +132,7 @@ function createBaseTimeStringSchema( options?: TimeStringOptions ) {
             const match = FULL_PATTERN.exec( value );
             if ( !match ) {
                 // Check if the value matches a pattern that might be a valid number with an invalid unit
-                const possibleUnitMatch = /^(-?(?:\d+)?\.?\d+)\s*([a-zA-Z]+)$/.exec( value );
+                const possibleUnitMatch = POSSIBLE_UNIT_PATTERN.exec( value );
 
                 if ( possibleUnitMatch && options?.invalidUnitError ) {
                     // This looks like a valid number with an invalid unit
@@ -152,12 +145,7 @@ function createBaseTimeStringSchema( options?: TimeStringOptions ) {
                         unitString
                     );
 
-                    v.issues.push( {
-                        code: 'invalid_format',
-                        format: 'regex',
-                        message,
-                        input: value,
-                    } );
+                    createIssue( v, message, value );
                     return;
                 } else {
                     // Regular format error
@@ -167,12 +155,7 @@ function createBaseTimeStringSchema( options?: TimeStringOptions ) {
                         value
                     );
 
-                    v.issues.push( {
-                        code: 'invalid_format',
-                        format: 'regex',
-                        message,
-                        input: value,
-                    } );
+                    createIssue( v, message, value );
                     return;
                 }
             }
@@ -185,12 +168,7 @@ function createBaseTimeStringSchema( options?: TimeStringOptions ) {
                     value
                 );
 
-                v.issues.push( {
-                    code: 'invalid_format',
-                    format: 'regex',
-                    message,
-                    input: value,
-                } );
+                createIssue( v, message, value );
                 return;
             }
 
@@ -210,12 +188,7 @@ function createBaseTimeStringSchema( options?: TimeStringOptions ) {
                     unitStr
                 );
 
-                v.issues.push( {
-                    code: 'invalid_format',
-                    format: 'regex',
-                    message,
-                    input: value,
-                } );
+                createIssue( v, message, value );
                 return;
             }
 
@@ -232,57 +205,33 @@ const baseTimeStringSchema = createBaseTimeStringSchema();
 function createRefinementWithMessage(
     schema: TimeStringSchema,
     checkFn: ( val: number ) => boolean,
-    params: string | TimeStringErrorParams | ( ( invalid: string ) => string ) | undefined,
+    params: ErrorParamType,
     defaultMessage: string
 ): TimeStringSchema {
-    // For string params, use an object with the message property to preserve exact message
-    if ( typeof params === 'string' ) {
-        return createTimeStringSchema(
-            schema.refine( checkFn, {
-                message: params,
-                path: [],
-            } )
-        );
-    }
-    // For function params, handle by converting the function to a string handler
-    else if ( typeof params === 'function' ) {
-        // First execute the check function, then call the params function with the string
-        return createTimeStringSchema(
-            schema.refine( checkFn, {
-                message: defaultMessage, // Use default message in schema definition
-                params: {
-                    // Store the function for later use
-                    customMessageFn: params
-                }
-            } )
-        );
-    }
-    // For object params with function message
-    else if ( params && typeof params.message === 'function' ) {
-        // First execute the check function, then call the params.message function with the string
-        return createTimeStringSchema(
-            schema.refine( checkFn, {
-                message: defaultMessage, // Use default message in schema definition
-                params: {
-                    // Store the function for later use
-                    customMessageFn: params.message
-                }
-            } )
-        );
-    }
-    // For object params with string message or default case
-    else {
-        const message = params && typeof params.message === 'string'
-            ? params.message
-            : defaultMessage;
+    // Extract message and customMessageFn
+    let message = defaultMessage;
+    let customMessageFn = undefined;
 
-        return createTimeStringSchema(
-            schema.refine( checkFn, {
-                message,
-                path: [],
-            } )
-        );
+    if ( typeof params === 'string' ) {
+        message = params;
+    } else if ( typeof params === 'function' ) {
+        customMessageFn = params;
+    } else if ( params?.message ) {
+        if ( typeof params.message === 'function' ) {
+            customMessageFn = params.message;
+        } else {
+            message = params.message;
+        }
     }
+
+    // Create refinement with appropriate options
+    return createTimeStringSchema(
+        schema.refine( checkFn, {
+            message,
+            path: [],
+            ...( customMessageFn ? { params: { customMessageFn } } : {} )
+        } )
+    );
 }
 
 // Function to add chainable methods to the schema with improved typing
@@ -290,7 +239,7 @@ function createTimeStringSchema( schema: z.ZodType<number>, options?: TimeString
     const newSchema = schema as TimeStringSchema;
 
     // Add positive validation with custom error message support
-    newSchema.positive = function ( params?: string | TimeStringPositiveParams | ( ( invalid: string ) => string ) ) {
+    newSchema.positive = function ( params?: ErrorParamType ): TimeStringSchema {
         return createRefinementWithMessage(
             this,
             ( val ) => val > 0,
@@ -300,7 +249,7 @@ function createTimeStringSchema( schema: z.ZodType<number>, options?: TimeString
     };
 
     // Add negative validation with custom error message support
-    newSchema.negative = function ( params?: string | TimeStringNegativeParams | ( ( invalid: string ) => string ) ) {
+    newSchema.negative = function ( params?: ErrorParamType ): TimeStringSchema {
         return createRefinementWithMessage(
             this,
             ( val ) => val < 0,
@@ -310,7 +259,7 @@ function createTimeStringSchema( schema: z.ZodType<number>, options?: TimeString
     };
 
     // Add minimum value validation with custom error message support
-    newSchema.min = function ( minValue: number, params?: string | TimeStringMinParams | ( ( invalid: string ) => string ) ) {
+    newSchema.min = function ( minValue: number, params?: ErrorParamType ): TimeStringSchema {
         return createRefinementWithMessage(
             this,
             ( val ) => val >= minValue,
@@ -320,7 +269,7 @@ function createTimeStringSchema( schema: z.ZodType<number>, options?: TimeString
     };
 
     // Add maximum value validation with custom error message support
-    newSchema.max = function ( maxValue: number, params?: string | TimeStringMaxParams | ( ( invalid: string ) => string ) ) {
+    newSchema.max = function ( maxValue: number, params?: ErrorParamType ): TimeStringSchema {
         return createRefinementWithMessage(
             this,
             ( val ) => val <= maxValue,
@@ -331,11 +280,7 @@ function createTimeStringSchema( schema: z.ZodType<number>, options?: TimeString
 
     // Add withErrorMessages method to create a new schema with custom error messages
     newSchema.withErrorMessages = function ( customOptions: TimeStringOptions ) {
-        // Create a new base schema with the custom error messages
-        const newBaseSchema = createBaseTimeStringSchema( customOptions );
-
-        // Add the chainable methods to the new schema
-        return createTimeStringSchema( newBaseSchema, customOptions );
+        return createTimeStringSchema( createBaseTimeStringSchema( customOptions ), customOptions );
     };
 
     return newSchema;
