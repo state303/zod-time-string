@@ -13,13 +13,13 @@ A Zod schema for parsing and validating time strings in various formats.
 
 ```bash
 # npm
-npm install zod-time-string
+npm install @state303/zod-time-string
 
 # yarn
-yarn add zod-time-string
+yarn add @state303/zod-time-string
 
 # pnpm
-pnpm add zod-time-string
+pnpm add @state303/zod-time-string
 ```
 
 ### Peer Dependencies
@@ -31,7 +31,7 @@ This package has the following peer dependencies:
 ## Usage
 
 ```typescript
-import { timeStringSchema } from 'zod-time-string';
+import { timeStringSchema } from '@state303/zod-time-string';
 
 // Parse time strings to milliseconds
 const milliseconds = timeStringSchema.parse('5m');  // 300000 (5 minutes in ms)
@@ -210,7 +210,7 @@ const schema4 = timeStringSchema
 An exported object and type containing all supported time units.
 
 ```typescript
-import { TimeUnit } from 'zod-time-string';
+import { TimeUnit } from '@state303/zod-time-string';
 
 // Available units
 TimeUnit.MILLISECOND // 'ms'
