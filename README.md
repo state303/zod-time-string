@@ -31,24 +31,24 @@ This package has the following peer dependencies:
 ## Usage
 
 ```typescript
-import { timeStringSchema } from '@state303/zod-time-string';
+import zts from '@state303/zod-time-string';
 
 // Parse time strings to milliseconds
-const milliseconds = timeStringSchema.parse('5m');  // 300000 (5 minutes in ms)
+const milliseconds = zodTimeString.parse('5m');  // 300000 (5 minutes in ms)
 
 // Handles various formats
-timeStringSchema.parse('1h');      // 3600000 (1 hour in ms)
-timeStringSchema.parse('1.5d');    // 129600000 (1.5 days in ms)
-timeStringSchema.parse('100ms');   // 100 (100 milliseconds)
-timeStringSchema.parse('2.5 hrs'); // 9000000 (2.5 hours in ms)
+zts.parse('1h');      // 3600000 (1 hour in ms)
+zts.parse('1.5d');    // 129600000 (1.5 days in ms)
+zts.parse('100ms');   // 100 (100 milliseconds)
+zts.parse('2.5 hrs'); // 9000000 (2.5 hours in ms)
 
 // Numbers without units are interpreted as milliseconds
-timeStringSchema.parse('1000');    // 1000 (milliseconds)
+zts.parse('1000');    // 1000 (milliseconds)
 
 // Will throw for invalid formats
 try {
-  timeStringSchema.parse('abc');
-  timeStringSchema.parse('5z');    // Invalid unit
+  zts.parse('abc');
+  zts.parse('5z');    // Invalid unit
 } catch (error) {
   // Handle validation errors
 }
@@ -56,12 +56,16 @@ try {
 
 ## API
 
-### `timeStringSchema`
+### `zodTimeString`
 
 The main export is a Zod schema that validates and transforms time strings.
 
 ```typescript
-import { timeStringSchema } from 'zod-time-string';
+import { zodTimeString } from '@state303/zod-time-string';
+
+// OR
+
+import zts from '@state303/zod-time-string'
 ```
 
 Input: String containing a number with an optional time unit.
@@ -77,7 +81,7 @@ Validates that the parsed value is positive (greater than 0).
 
 ```typescript
 // Validates that the time is positive
-const schema = timeStringSchema.positive();
+const schema = zodTimeString.positive();
 schema.parse('5m');       // 300000 (valid)
 schema.parse('0ms');      // throws error (zero is not positive)
 schema.parse('-1h');      // throws error (negative)
@@ -89,7 +93,7 @@ Validates that the parsed value is negative (less than 0).
 
 ```typescript
 // Validates that the time is negative
-const schema = timeStringSchema.negative();
+const schema = zodTimeString.negative();
 schema.parse('-5m');      // -300000 (valid)
 schema.parse('0ms');      // throws error (zero is not negative)
 schema.parse('1h');       // throws error (positive)
@@ -101,7 +105,7 @@ Validates that the parsed value is greater than or equal to the specified minimu
 
 ```typescript
 // Validates that the time is at least 1 second (1000ms)
-const schema = timeStringSchema.min(1000);
+const schema = zodTimeString.min(1000);
 schema.parse('1s');       // 1000 (valid - equal to min)
 schema.parse('5s');       // 5000 (valid - greater than min)
 schema.parse('500ms');    // throws error (less than min)
@@ -113,7 +117,7 @@ Validates that the parsed value is less than or equal to the specified maximum (
 
 ```typescript
 // Validates that the time is at most 1 minute (60000ms)
-const schema = timeStringSchema.max(60000);
+const schema = zodTimeString.max(60000);
 schema.parse('1m');       // 60000 (valid - equal to max)
 schema.parse('30s');      // 30000 (valid - less than max)
 schema.parse('2m');       // throws error (greater than max)
@@ -128,7 +132,7 @@ The validation methods can be chained together to create complex validation rule
 // 1. Positive
 // 2. At least 1 second (1000ms)
 // 3. At most 1 hour (3600000ms)
-const schema = timeStringSchema
+const schema = zodTimeString
   .positive()
   .min(1000)
   .max(3600000);
@@ -150,26 +154,28 @@ You can customize error messages for all validations to better fit your applicat
 Use the `withErrorMessages` method to customize error messages for the basic validations:
 
 ```typescript
-const schema = timeStringSchema.withErrorMessages({
+import zts from '@state303/zod-time-string';
+
+const schema = zts.withErrorMessages({
   invalidFormatError: 'The time format is invalid',
   invalidValueError: 'The time value is invalid',
   invalidUnitError: 'The time unit is not recognized',
 });
 
 // Or with object format for more options
-const schema2 = timeStringSchema.withErrorMessages({
+const schema2 = zts.withErrorMessages({
   invalidFormatError: { message: 'The time format is invalid' },
   invalidUnitError: { message: 'The time unit is not recognized' },
 });
 
 // With function-based format for dynamic error messages
-const schema3 = timeStringSchema.withErrorMessages({
+const schema3 = zts.withErrorMessages({
   invalidFormatError: (invalid) => `"${invalid}" is not a valid time format`,
   invalidUnitError: (unitStr) => `Unit "${unitStr}" is not supported`,
 });
 
 // Or with function in object format
-const schema4 = timeStringSchema.withErrorMessages({
+const schema4 = zts.withErrorMessages({
   invalidFormatError: { 
     message: (invalid) => `Could not parse "${invalid}" as a time string` 
   }
@@ -182,24 +188,25 @@ Each chainable validation method accepts a custom error message parameter:
 
 ```typescript
 // With string format
-const schema = timeStringSchema
+import zts from '@state303/zod-time-string';
+const schema = zts
   .positive('Value must be greater than zero')
   .min(1000, 'Value must be at least 1 second')
   .max(3600000, 'Value must be at most 1 hour');
 
 // Or with object format
-const schema2 = timeStringSchema
+const schema2 = zts
   .positive({ message: 'Value must be greater than zero' })
   .min(1000, { message: 'Value must be at least 1 second' });
 
 // With function-based error messages for dynamic formatting
-const schema3 = timeStringSchema
+const schema3 = zts
   .positive((invalidValue) => `Value ${invalidValue} must be positive`)
   .min(1000, (invalidValue) => `Value ${invalidValue} is below the minimum of 1000ms`)
   .max(60000, (invalidValue) => `Value ${invalidValue} exceeds the maximum of 1 minute`);
 
 // Function-based messages can also be used within objects
-const schema4 = timeStringSchema
+const schema4 = zts
   .positive({ 
     message: (value) => `Expected a positive value, but got ${value}` 
   });
@@ -250,21 +257,21 @@ The schema supports a wide variety of time formats:
 
 ```typescript
 // Basic usage
-timeStringSchema.parse('100ms');   // 100
-timeStringSchema.parse('1s');      // 1000
-timeStringSchema.parse('5m');      // 300000
-timeStringSchema.parse('2h');      // 7200000
-timeStringSchema.parse('1d');      // 86400000
-timeStringSchema.parse('1mo');     // 2592000000
-timeStringSchema.parse('1y');      // 31536000000
+zodTimeString.parse('100ms');   // 100
+zodTimeString.parse('1s');      // 1000
+zodTimeString.parse('5m');      // 300000
+zodTimeString.parse('2h');      // 7200000
+zodTimeString.parse('1d');      // 86400000
+zodTimeString.parse('1mo');     // 2592000000
+zodTimeString.parse('1y');      // 31536000000
 
 // Edge cases
-timeStringSchema.parse('1.5h');    // 5400000 (1.5 hours)
-timeStringSchema.parse('0.5d');    // 43200000 (half day)
-timeStringSchema.parse('.5m');     // 30000 (half minute)
-timeStringSchema.parse('-1h');     // -3600000 (negative 1 hour)
-timeStringSchema.parse('  5  h  '); // 18000000 (whitespace handled)
-timeStringSchema.parse('5M');      // 300000 (case insensitive)
+zodTimeString.parse('1.5h');    // 5400000 (1.5 hours)
+zodTimeString.parse('0.5d');    // 43200000 (half day)
+zodTimeString.parse('.5m');     // 30000 (half minute)
+zodTimeString.parse('-1h');     // -3600000 (negative 1 hour)
+zodTimeString.parse('  5  h  '); // 18000000 (whitespace handled)
+zodTimeString.parse('5M');      // 300000 (case insensitive)
 ```
 
 ## License

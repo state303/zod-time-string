@@ -4,21 +4,21 @@
  */
 
 // Import from the dist directory (the built output)
-import { timeStringSchema } from '../dist';
+import { zodTimeString } from '../dist';
 
-describe('timeStringSchema integration', () => {
+describe('zodTimeString integration', () => {
   // Basic functionality test
   test('should parse time strings from the built package', () => {
     // Test a few basic time formats
-    expect(timeStringSchema.parse('5m')).toBe(300000);
-    expect(timeStringSchema.parse('1h')).toBe(3600000);
-    expect(timeStringSchema.parse('1.5d')).toBe(129600000);
-    expect(timeStringSchema.parse('100ms')).toBe(100);
+    expect(zodTimeString.parse('5m')).toBe(300000);
+    expect(zodTimeString.parse('1h')).toBe(3600000);
+    expect(zodTimeString.parse('1.5d')).toBe(129600000);
+    expect(zodTimeString.parse('100ms')).toBe(100);
   });
 
   // Test chainable methods
   test('should support chainable validation methods from the built package', () => {
-    const schema = timeStringSchema.positive().min(1000).max(3600000);
+    const schema = zodTimeString.positive().min(1000).max(3600000);
     
     // Valid cases
     expect(schema.parse('30s')).toBe(30000);
@@ -34,7 +34,7 @@ describe('timeStringSchema integration', () => {
   // Test custom error messages
   test('should support custom error messages from the built package', () => {
     const customMsg = 'Invalid time format';
-    const schema = timeStringSchema.withErrorMessages({
+    const schema = zodTimeString.withErrorMessages({
       invalidFormatError: customMsg
     });
 
