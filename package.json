@@ -1,0 +1,54 @@
+{
+  "name": "zod-time-string",
+  "version": "0.0.0",
+  "description": "A zod time schema for time string validation",
+  "keywords": [
+    "zod",
+    "validation",
+    "time",
+    "string",
+    "schema"
+  ],
+  "homepage": "https://github.com/state303/zod-time-string",
+  "bugs": {
+    "url": "https://github.com/state303/zod-time-string/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/state303/zod-time-string.git"
+  },
+  "license": "MIT",
+  "author": {
+    "email": "state303@linux.com",
+    "name": "state303"
+  },
+  "main": "./dist/index.js",
+  "module": "./dist/index.mjs",
+  "types": "./dist/index.d.ts",
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsup",
+    "test": "jest"
+  },
+  "peerDependencies": {
+    "typescript": "^5",
+    "zod": "^4"
+  },
+  "devDependencies": {
+    "@commitlint/cli": "^19.8.1",
+    "@commitlint/config-conventional": "^19.8.1",
+    "@semantic-release/changelog": "^6.0.3",
+    "@semantic-release/git": "^10.0.1",
+    "@types/jest": "^30.0.0",
+    "husky": "^9.1.7",
+    "jest": "^30.1.2",
+    "semantic-release": "^24.2.7",
+    "ts-jest": "^29.4.1",
+    "ts-node": "^10.9.2",
+    "tsup": "^8.5.0",
+    "typescript": "^5.9.2",
+    "zod": "^4.1.5"
+  }
+}
