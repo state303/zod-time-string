@@ -1,0 +1,62 @@
+name: Release to Production
+concurrency: release-to-prod-pipeline
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  create-release:
+    permissions:
+      contents: write # to be able to publish a GitHub release
+      issues: write # to be able to comment on released issues
+      pull-requests: write # to be able to comment on released pull requests
+    runs-on: ubuntu-24.04
+    name: Create Release
+    outputs:
+      released: ${{ env.RELEASED }}
+      newVersion: ${{ env.NEW_VERSION }}
+    steps:
+      - uses: actions/checkout@v3
+        name: Checkout code
+        id: checkout
+        with:
+          # This is needed for semantic-release to work
+          fetch-depth: 0
+
+      - uses: pnpm/action-setup@v4
+        name: Install pnpm
+        with:
+          version: 10
+
+      - name: Prepare prerelease semantic
+        if: github.ref != 'refs/heads/main'
+        run: mv .releaserc.prerelease.yaml .releaserc.yaml
+
+      - uses: actions/setup-node@v3
+        name: Setup Node.js
+        with:
+          node-version: 20
+          cache: 'pnpm'
+
+      - name: Install Package Dependencies
+        # needed for both commitlint and semantic-release to work
+        run: pnpm i
+
+      - name: Build Library
+        run: pnpm build
+
+      - name: Verify the integrity of provenance attestations and registry signatures for installed dependencies
+        run: pnpm audit signature -P
+
+      - name: Create GitHub release
+        uses: cycjimmy/semantic-release-action@v4
+        id: semantic-release
+        with:
+          extra_plugins: |
+            @semantic-release/changelog@6
+            @semantic-release/github@11
+            @semantic-release/git@10
+        env:
+          GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
+          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}

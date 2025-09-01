@@ -1,5 +1,5 @@
 {
-  "name": "zod-time-string",
+  "name": "@state303/zod-time-string",
   "version": "0.0.0",
   "description": "A zod time schema for time string validation",
   "keywords": [
@@ -9,13 +9,19 @@
     "string",
     "schema"
   ],
+  "readme": "README.md",
+  "release": "semantic-release",
   "homepage": "https://github.com/state303/zod-time-string",
   "bugs": {
     "url": "https://github.com/state303/zod-time-string/issues"
   },
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://registry.npmjs.org/"
+  },
   "repository": {
     "type": "git",
-    "url": "https://github.com/state303/zod-time-string.git"
+    "url": "git+https://github.com/state303/zod-time-string.git"
   },
   "license": "MIT",
   "author": {
@@ -43,6 +49,7 @@
     "@semantic-release/changelog": "^6.0.3",
     "@semantic-release/git": "^10.0.1",
     "@types/jest": "^30.0.0",
+    "conventional-changelog-conventionalcommits": "^9.1.0",
     "husky": "^9.1.7",
     "jest": "^30.1.2",
     "semantic-release": "^24.2.7",
