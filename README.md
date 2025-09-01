@@ -2,7 +2,7 @@
 
 A Zod schema for parsing and validating time strings in various formats.
 
-[![npm version](https://img.shields.io/npm/v/zod-time-string.svg)](https://www.npmjs.com/package/zod-time-string)
+[![npm version](https://img.shields.io/npm/v/zod-time-string.svg)](https://www.npmjs.com/package/@state303/zod-time-string)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 ## Overview
