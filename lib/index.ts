@@ -288,5 +288,3 @@ function createTimeStringSchema( schema: z.ZodType<number>, options?: TimeString
 
 // Export the enhanced schema with chainable methods
 export const zodTimeString = createTimeStringSchema( baseTimeStringSchema );
-
-export default zodTimeString;
